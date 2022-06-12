@@ -93,33 +93,37 @@ class RecommenderNet(nn.Layer):
         super(RecommenderNet, self).__init__()
         self.lstm = paddle.nn.LSTM(input_size=input_size,
                                    hidden_size=hidden_size,
-                                   num_layers=1)
-        self.lstm2 = paddle.nn.LSTM(input_size=input_size,
+                                   num_layers=3)
+        self.lstm1 = paddle.nn.LSTM(input_size=64,
                                     hidden_size=hidden_size,
                                     num_layers=1,
                                     direction='bidirectional')
-        self.lstm1 = paddle.nn.LSTM(input_size=64,
-                                    hidden_size=1,
-                                    num_layers=2)
+        self.lstm2 = paddle.nn.LSTM(input_size=128,
+                                    hidden_size=64,
+                                    num_layers=1)
+        self.linear1 = paddle.nn.Linear(64, hidden_size)
+        self.linear2 = paddle.nn.Linear(hidden_size, 32)
+        self.linear3 = paddle.nn.Linear(32, hidden_size)
+        self.outlinear = paddle.nn.Linear(hidden_size, 16)
+        self.relu = paddle.nn.ReLU()
 
-        # for computing attention weights
-        #self.attention_linear1 = paddle.nn.Linear(hidden_size * 2 * 2, hidden_size)
-        #self.attention_linear2 = paddle.nn.Linear(hidden_size, 1)
-        #self.linear1 = paddle.nn.Linear(128, hidden_size)
-        #self.linear2 = paddle.nn.Linear(hidden_size, 16)
-        self.outlinear = paddle.nn.Linear(hidden_size * 2, 16)
 
-    def forward(self, lstm_input):
+def forward(self, lstm_input):
         """
         forward
         :param lstm_input: lstm input
         :return:
         """
         x, (h, c) = self.lstm(lstm_input)
-        x, (h, c) = self.lstm2(lstm_input)
+        x, (h, c) = self.lstm1(x)
+        x, (h, c) = self.lstm2(x)
         h = paddle.reshape(h, [1, 1, -1])
         hidden = paddle.transpose(h, [1, 0, 2])
-        output = self.outlinear(hidden)
+        x = self.linear1(hidden)
+        x = self.linear2(x)
+        x = self.linear3(x)
+        x = self.relu(x)
+        output = self.outlinear(x)
         output = paddle.squeeze(output)
         return output
 
@@ -232,7 +236,6 @@ if __name__ == '__main__':
 
     train_data_path = sys.argv[1]
     test_data_path = sys.argv[2]
-
     trainer = Trainer(train_data_path, test_data_path)
     trainer.load_data()
     trainer.train()
