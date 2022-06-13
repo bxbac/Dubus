@@ -157,10 +157,11 @@ class Trainer(object):
         self.x_test = data_test.iloc[:, 2:-1]
         self.y_test = data_test.iloc[:, -1]
 
-        self.x_train = self.change_cols_format(self.x_train, 'feature', 6)
-        self.x_test = self.change_cols_format(self.x_test, 'feature', 6)
+        self.x_train = self.change_cols_format(self.x_train, 'feature')
+        self.x_test = self.change_cols_format(self.x_test, 'feature')
         self.y_train = self.change_cols_format(self.y_train, 'label', 16)
         self.y_test = self.change_cols_format(self.y_test, 'label', 16)
+
         self.x_train = self.x_train.astype(np.float32)
         self.x_train = paddle.to_tensor(self.x_train)
         self.y_train = self.y_train.astype(np.float32)
@@ -170,13 +171,13 @@ class Trainer(object):
         self.y_test = self.y_test.astype(np.float32)
         self.y_test = paddle.to_tensor(self.y_test)
 
-    def train(self):
+    def train(self, feature_dim, hidden_size=64):
         """
         train
         :param:
         :return:
         """
-        model = RecommenderNet(6, 64)
+        model = RecommenderNet(feature_dim, hidden_size)
         model = paddle.Model(model)
 
         optimizer = paddle.optimizer.Adam(parameters=model.parameters(), \
@@ -210,7 +211,9 @@ class Trainer(object):
         :return:
         """
         arr = dataframe.values
+
         if symbol == 'feature':
+            dim = len(arr[0][0].split(','))
             res_arr = np.zeros(shape=(len(arr), len(arr[0]), dim))
             for i in range(len(arr)):
                 for j in range(len(arr[0])):
@@ -230,12 +233,14 @@ class Trainer(object):
 
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("Error argv: python train_main.py 1)train_data_path 2)test_data_path")
+    if len(sys.argv) < 3:
+        print("Error argv: python train_main.py 1)train_data_path 2)test_data_path 3)feature_dim")
         sys.exit(1)
 
     train_data_path = sys.argv[1]
     test_data_path = sys.argv[2]
+    feature_dim = sys.argv[3]
+
     trainer = Trainer(train_data_path, test_data_path)
     trainer.load_data()
-    trainer.train()
+    trainer.train(feature_dim)
